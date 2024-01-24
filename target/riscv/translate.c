@@ -45,6 +45,8 @@ static TCGv load_val;
 /* globals for PM CSRs */
 static TCGv pm_mask;
 static TCGv pm_base;
+static TCGv tm, tn, tk;
+static TCGv stra, strb, strc;
 
 /*
  * If an operation is being performed on less than TARGET_LONG_BITS,
@@ -1101,6 +1103,7 @@ static uint32_t opcode_at(DisasContextBase *dcbase, target_ulong pc)
 #include "decode-xthead.c.inc"
 #include "insn_trans/trans_xthead.c.inc"
 #include "insn_trans/trans_xventanacondops.c.inc"
+#include "insn_trans/trans_rvmm.c.inc"
 
 /* Include the auto-generated decoder for 16 bit insn */
 #include "decode-insn16.c.inc"
@@ -1330,4 +1333,11 @@ void riscv_translate_init(void)
                                  "pmmask");
     pm_base = tcg_global_mem_new(tcg_env, offsetof(CPURISCVState, cur_pmbase),
                                  "pmbase");
+    /* SOPHGO TPU register */
+    tm = tcg_global_mem_new(tcg_env, offsetof(CPURISCVState, tm), "tm");
+    tn = tcg_global_mem_new(tcg_env, offsetof(CPURISCVState, tn), "tn");
+    tk = tcg_global_mem_new(tcg_env, offsetof(CPURISCVState, tk), "tk");
+    stra = tcg_global_mem_new(tcg_env, offsetof(CPURISCVState, stra), "stra");
+    strb = tcg_global_mem_new(tcg_env, offsetof(CPURISCVState, strb), "strb");
+    strc = tcg_global_mem_new(tcg_env, offsetof(CPURISCVState, strc), "strc");
 }
