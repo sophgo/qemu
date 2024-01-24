@@ -29,6 +29,24 @@
 %rm     12:3
 %nf     29:3                     !function=ex_plus_1
 
+# Sophgo extension fields:
+%ms1    15:4
+%ms2    20:4
+%md     7:4
+%ew     26:2
+%tew    20:2
+%smd    7:3
+%rz     10:1
+%pred   20:2
+%succ   15:2
+%type   23:2
+
+# for vvw
+%vmd    26:2
+%vvs1   7:5
+%vvs2   15:5
+%vvs3   20:5
+
 # immediates:
 %imm_i    20:s12
 %imm_s    25:s7 7:5
@@ -56,6 +74,22 @@
 &r2nfvm    vm rd rs1 nf
 &rnfvm     vm rd rs1 rs2 nf
 &k_aes     shamt rs2 rs1 rd
+
+# Sophgo arguments sets:
+&mset      ew am rs csr rsv
+&mld       ew abc rs md rsv
+&mst       ew abc rs ms rsv
+&mx        rsv1 rsv2 rsv3 rs md
+&mv        rsv1 rsv2 rsv3 vs md
+&vvw       md vs1 vs2 vs3
+&vm        rsv1 rsv2 ms vd
+
+&mma       ms2 ms1 md rz
+&mm        ms2 ms1 md rsv
+&trans     rsv md ms1 ew
+&cal       md ms1 ms2
+&mop       rsv ms1 md
+&sg_fence     rsv1 rsv2 rsv3 pred succ
 
 # Formats 32:
 @r       .......   ..... ..... ... ..... ....... &r                %rs2 %rs1 %rd
@@ -98,11 +132,29 @@
 @k_aes   .. ..... ..... .....  ... ..... ....... &k_aes  shamt=%imm_bs   %rs2 %rs1 %rd
 @i_aes   .. ..... ..... .....  ... ..... ....... &i      imm=%imm_rnum        %rs1 %rd
 
+# SOPHGO TPU extension
+@sg_mset  .... .. . .. ... ..... ... rsv:1 .... ....... &mset ew=%ew am=%type rs=%rs1 csr=%md
+@sg_mld   .... .. . .. ... ..... ... rsv:1 .... ....... &mld ew=%ew abc=%type rs=%rs1 md=%md
+@sg_mst   .... .. . .. ... ..... ... rsv:1 .... ....... &mst ew=%ew abc=%type rs=%rs1 ms=%md
+@sg_m_x   .... rsv1:2 . rsv2:2 ... ..... ... rsv3:1 .... ....... &mx md=%md rs=%rs1
+@sg_m_v   .... rsv1:2 . ..... rsv2:5 ... rsv3:1 .... ....... &mv vs=%rs2 md=%md
+@sg_m_vvw .... .. . ..... ..... ... ..... ....... &vvw vs1=%rd vs2=%rs1 vs3=%rs2 md=%vmd
+@sg_v_m   .... rsv1:2 . rsv2:6 .... ... ..... ....... &vm ms=%ms1 vd=%rd
+
+@sg_mma   ........ .... . .... .... . ... ....... &mma ms2=%ms2 ms1=%ms1 md=%md rz=%rz
+@sg_mm    ........ .... . .... .... rsv:1 ... ....... &mm ms2=%ms2 ms1=%ms1 md=%md
+@sg_trans ........ rsv:2 .. . .... .... .... ....... &trans md=%md ms1=%ms1 ew=%tew
+@sg_cal   ........ .... . .... .... .... ....... &cal md=%md ms1=%ms1 ms2=%ms2
+@sg_mop   ........ rsv:4 . .... .... .... ....... &mop ms1=%ms1 md=%md
+@sg_fence     ........ rsv1:2 .. . rsv2:2 .. .... rsv3:4 ....... &sg_fence  pred=%pred succ=%succ
+
 # Formats 64:
 @sh5     .......  ..... .....  ... ..... ....... &shift  shamt=%sh5      %rs1 %rd
 
 # Formats 128:
 @sh6       ...... ...... ..... ... ..... ....... &shift shamt=%sh6 %rs1 %rd
+
+
 
 # *** Privileged Instructions ***
 ecall       000000000000     00000 000 00000 1110011
@@ -198,7 +250,13 @@ ldu      ............   ..... 111 ..... 0000011 @i
   lq       ............   ..... 010 ..... 0001111 @i
 }
 sq       ............   ..... 100 ..... 0100011 @s
-addid    ............  .....  000 ..... 1011011 @i
+{
+  addid      ............  .....  000 ..... 1011011 @i
+  # SiFive Vector Coprocessor Interface instructions: sf.vc.vv, sf.vc.vvw
+  # have the overlapped pattern with RV128I instruction: addid
+  sg_m_vvw   1111 .. 1 ..... ..... 000 ..... 1011011 @sg_m_vvw
+
+}
 sllid    000000 ......  ..... 001 ..... 1011011 @sh6
 srlid    000000 ......  ..... 101 ..... 1011011 @sh6
 sraid    010000 ......  ..... 101 ..... 1011011 @sh6
@@ -1004,3 +1062,58 @@ vgmul_vv    101000 1 ..... 10001 010 ..... 1110111 @r2_vm_1
 vsm4k_vi    100001 1 ..... ..... 010 ..... 1110111 @r_vm_1
 vsm4r_vv    101000 1 ..... 10000 010 ..... 1110111 @r2_vm_1
 vsm4r_vs    101001 1 ..... 10000 010 ..... 1110111 @r2_vm_1
+
+# SiFive Vector Coprocessor Interface instructions
+# (sf.vc.vv, sf.vc.vvw have the overlapped pattern with RV128I instruction: addid)
+{
+  # *** SOPHGO TPU extension: set tensor shape and strid ***
+  sg_mset            0000 .. 1 .. 000 ..... 100 . .... 1011011 @sg_mset
+
+  # *** SOPHGO TPU extension: mov data from variable to TRF ***
+  sg_m_x             0000 .. 1 .. 101 ..... 100 . .... 1011011 @sg_m_x
+
+  # *** SOPHGO TPU extension: memory store and load ***
+  sg_mld             0000 .. 1 .. 001 ..... 100 . .... 1011011 @sg_mld
+  sg_mld_t           0000 .. 1 .. 010 ..... 100 . .... 1011011 @sg_mld
+  sg_mst             0000 .. 1 .. 011 ..... 100 . .... 1011011 @sg_mst
+  sg_mst_t           0000 .. 1 .. 100 ..... 100 . .... 1011011 @sg_mst
+}
+
+{
+  # *** SOPHGO TPU extension: vector GPR to matrix GPR (sf.vc.i)  ***
+  sg_v_m      0000 .. 0 ...... .... 011 ..... 1011011 @sg_v_m
+
+  # *** SOPHGO TPU extension: matmul with accumulator (sf.vc.i)  ***
+  sg_mmaqs    00000010 .... 0 .... 0110 . ... 1011011 @sg_mma
+  sg_mmaf     00000110 .... 0 .... 0110 . ... 1011011 @sg_mma
+  sg_mmawf    00001010 .... 0 .... 0110 . ... 1011011 @sg_mma
+
+  # *** SOPHGO TPU extension: matmul without accumulator (sf.vc.i) ***
+  sg_mmqs     00001110 .... 0 .... 0110 . ... 1011011 @sg_mm
+  sg_mmf      00000011 .... 0 .... 0110 . ... 1011011 @sg_mm
+  sg_mmwf     00000111 .... 0 .... 0110 . ... 1011011 @sg_mm
+
+  # *** SOPHGO TPU extension: shape transfer (sf.vc.i) ***
+  sg_mtrans   00000110 .. .. 1 .... 0110 .... 1011011 @sg_trans
+  sg_img2col 00001010 .. .. 1 .... 0110 .... 1011011 @sg_trans
+
+  # *** SOPHGO TPU extension: calculation (sf.vc.i) ***
+  sg_mdequant 00001110 .... 1 .... 0110 .... 1011011 @sg_cal
+  sg_mquant   00000111 .... 1 .... 0110 .... 1011011 @sg_cal
+  sg_maddf    00001111 .... 1 .... 0110 .... 1011011 @sg_cal
+  sg_mmulf    00000010 .... 0 .... 0111 .... 1011011 @sg_cal
+  sg_madds    00000110 .... 0 .... 0111 .... 1011011 @sg_cal
+
+  # *** SOPHGO TPU extension: matrix operations (sf.vc.i) ***
+  sg_mcopy    00000011 .... 1 .... 0110 .... 1011011 @sg_mop
+  sg_mcvtnf   00001011 .... 1 .... 0110 .... 1011011 @sg_mop
+
+  # *** SOPHGO TPU extension: system operations (sf.vc.i) ***
+  sg_fence    00001111 .. .. 1 .. .. 0111 .... 1011011 @sg_fence
+}
+
+{
+  # *** SOPHGO TPU extension: mov data from VRF to TRF (sf.vc.iv) ***
+  sg_m_v             0010 .. 1 ..... ..... 011 . .... 1011011  @sg_m_v
+}
+

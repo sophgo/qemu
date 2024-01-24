@@ -1,0 +1,15 @@
+
+
+## COMPILE
+
+$ {LLVM_PATH}/clang -static ./tests/vcix/path_to_file/cfile.c ./tests/vcix/path_to_file/sfile.S -o file -march=rv64imafdcv_zicsr_zifencei_zfh_zba_zbb_zvfh_xsfvfnrclipxfqf_xsfvfwmaccqqq_xsfvqmaccqoq_xsfvcp_xsgmat --gcc-toolchain=/opt/riscv --sysroot=/opt/riscv/sysroot/ -g
+
+## RUN
+
+$ ./build/qemu-riscv64 -cpu sifive-x280 file
+
+## Python test case
+
+$ python3 run_case.py
+
+**Please install numpy**

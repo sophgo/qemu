@@ -412,6 +412,30 @@ struct CPUArchState {
     uint64_t kvm_timer_state;
     uint64_t kvm_timer_frequency;
 #endif /* CONFIG_KVM */
+
+    /* for SOPHGO TPU */
+    target_ulong tm;
+    target_ulong tn;
+    target_ulong tk;
+    target_ulong stra;
+    target_ulong strb;
+    target_ulong strc;
+    target_ulong conv;
+    target_ulong kh, kw;
+    target_ulong sh, sw;
+    target_ulong pl, pr;
+    target_ulong pt, pb;
+    target_ulong strh, strw;
+    target_ulong iw, ih;
+    target_ulong ow, oh;
+    target_ulong offh, offw;
+    target_ulong m_stride, r_size, c_size, amod, mew;
+    struct TREG
+    {
+        uint8_t data[256];
+    } treg[16];
+
+    uint32_t accumulator[256];
 };
 
 /*
